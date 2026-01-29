@@ -1,165 +1,380 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { useCashier } from '../context/CashierContext';
+import { useAuth } from '../context/AuthContext';
+import { DashboardStats } from '../components/DashboardStats';
+import { useNavigate, Link } from 'react-router-dom';
+import { cn } from '../lib/utils';
 import {
     TrendingUp,
     Users,
     Package,
     DollarSign,
+    AlertCircle,
     ArrowUpRight,
     ArrowDownRight,
-    AlertCircle
+    ShoppingCart,
+    Plus,
+    Loader2,
+    Store,
+    Lock,
+    Activity
 } from 'lucide-react';
+import { CashierManager } from '../components/CashierManager';
 import {
-    LineChart,
-    Line,
+    AreaChart,
+    Area,
     XAxis,
     YAxis,
     CartesianGrid,
     Tooltip,
-    ResponsiveContainer,
-    AreaChart,
-    Area
+    ResponsiveContainer
 } from 'recharts';
+import { useViewport } from '../hooks/useViewport';
+import MobileDashboard from './mobile/MobileDashboard';
 
-const data = [
-    { name: '18:00', sales: 400, stock: 240 },
-    { name: '19:00', sales: 700, stock: 220 },
-    { name: '20:00', sales: 1200, stock: 190 },
-    { name: '21:00', sales: 1800, stock: 150 },
-    { name: '22:00', sales: 2400, stock: 110 },
-    { name: '23:00', sales: 2100, stock: 80 },
-    { name: '00:00', sales: 1500, stock: 60 },
-];
+interface DashboardStats {
+    todaySales: number;
+    todayProfit: number;
+    itemsSold: number;
+    transactionCount: number;
+}
 
-const StatCard = ({ title, value, change, icon: Icon, trend }: any) => (
-    <div className="glass-card p-6 flex flex-col justify-between">
-        <div className="flex justify-between items-start">
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-primary">
-                <Icon className="w-6 h-6" />
-            </div>
-            {trend && (
-                <span className={`flex items-center text-xs font-medium px-2 py-1 rounded-full ${trend === 'up' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                    {trend === 'up' ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
-                    {change}%
-                </span>
+const StatCard = ({ title, value, change, icon: Icon, trend, path, loading }: any) => {
+    const navigate = useNavigate();
+    return (
+        <div
+            onClick={() => path && navigate(path)}
+            className={cn(
+                "glass-card p-6 flex flex-col justify-between group hover:border-primary/50 transition-all",
+                path ? "cursor-pointer hover:scale-[1.02]" : "cursor-default"
             )}
+        >
+            <div className="flex justify-between items-start">
+                <div className="p-2 bg-white/5 rounded-xl group-hover:bg-primary/10 transition-colors">
+                    <Icon className="w-6 h-6 text-muted group-hover:text-primary transition-colors" />
+                </div>
+                {change !== undefined && (
+                    <div className={cn(
+                        "flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-full",
+                        trend === 'up' ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+                    )}>
+                        {trend === 'up' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                        {change}%
+                    </div>
+                )}
+            </div>
+            <div className="mt-4">
+                <p className="text-muted text-sm font-medium">{title}</p>
+                {loading ? (
+                    <div className="flex items-center gap-2 mt-1">
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    </div>
+                ) : (
+                    <h3 className="text-3xl font-bold mt-1">{value}</h3>
+                )}
+            </div>
         </div>
-        <div className="mt-4">
-            <p className="text-muted text-sm font-medium">{title}</p>
-            <h3 className="text-2xl font-bold mt-1">{value}</h3>
+    );
+};
+
+const StockAlertItem = ({ name, stock, min }: any) => {
+    const navigate = useNavigate();
+    return (
+        <div
+            onClick={() => navigate('/inventory')}
+            className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10 group hover:bg-white/10 hover:border-primary/30 transition-all cursor-pointer"
+        >
+            <div>
+                <p className="font-medium text-sm">{name}</p>
+                <p className="text-xs text-muted">Mínimo: {min} un.</p>
+            </div>
+            <div className="text-right">
+                <p className={cn(
+                    "text-sm font-bold",
+                    stock === 0 ? "text-red-500" : "text-yellow-500"
+                )}>
+                    {stock} un.
+                </p>
+                <p className="text-[10px] text-muted uppercase tracking-tighter">Estoque Atual</p>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const Dashboard = () => {
+    const navigate = useNavigate();
+    const { isMobile } = useViewport();
+    const { currentSession, loading: loadingCashier } = useCashier();
+    const [showCashierManager, setShowCashierManager] = useState(false);
+    const { role } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [stats, setStats] = useState<DashboardStats>({
+        todaySales: 0,
+        todayProfit: 0,
+        itemsSold: 0,
+        transactionCount: 0
+    });
+    const [stockAlerts, setStockAlerts] = useState<any[]>([]);
+    const [chartData, setChartData] = useState<any[]>([]);
+
+    useEffect(() => {
+        let mounted = true; // A variável nasce dentro do useEffect
+
+        const fetchDashboardData = async () => {
+            if (!mounted) return;
+            setLoading(true);
+            setError(null);
+            console.log('🔍 [Dashboard] Loading data...');
+
+            try {
+                const startOfDay = new Date();
+                startOfDay.setHours(0, 0, 0, 0);
+                const isoToday = startOfDay.toISOString();
+
+                // For a more robust "today" including timezone shifts in DB, 
+                // sometimes using just the date string is better for 'date' columns,
+                // but for 'timestamptz' we use ISO.
+                console.log('🔍 [Dashboard] Filtering from:', isoToday);
+
+                // Busca Vendas, Itens e Produtos em paralelo
+                // Simplificando busca de itens: buscamos todos os itens de transações do tipo 'sale' de hoje
+                const [txRes, prodRes] = await Promise.all([
+                    supabase.from('transactions').select('*').gte('created_at', isoToday).eq('type', 'sale'),
+                    supabase.from('products').select('*').order('stock_quantity', { ascending: true })
+                ]);
+
+                if (txRes.error) throw txRes.error;
+                if (prodRes.error) throw prodRes.error;
+
+                const transactions = txRes.data || [];
+                const allProducts = prodRes.data || [];
+
+                // Agora buscamos os itens especificamente para as transações encontradas
+                let txItems: any[] = [];
+                if (transactions.length > 0) {
+                    const txIds = transactions.map(t => t.id);
+                    const { data: itemsData, error: itemsError } = await supabase
+                        .from('transaction_items')
+                        .select('*')
+                        .in('transaction_id', txIds);
+
+                    if (!itemsError && itemsData) {
+                        txItems = itemsData;
+                    }
+                }
+
+                // Cálculos de Stats
+                const todaySales = transactions.reduce((acc, t) => acc + (t.total_amount || 0), 0);
+                const itemsSold = txItems.reduce((acc, i) => acc + (i.quantity || 0), 0);
+                const todayProfit = txItems.reduce((acc, i) => acc + (((i.unit_price || 0) - (i.unit_cost || 0)) * (i.quantity || 0)), 0);
+
+                if (mounted) {
+                    setStats({
+                        todaySales,
+                        todayProfit,
+                        itemsSold,
+                        transactionCount: transactions.length
+                    });
+                    setStockAlerts(allProducts.filter(p => p.stock_quantity <= p.min_stock_alert).slice(0, 5));
+
+                    // Processamento de dados para o gráfico (Últimas 8h ou Horas do Dia)
+                    const hourlyData: { [key: string]: number } = {};
+                    transactions.forEach((t) => {
+                        const hour = new Date(t.created_at).getHours();
+                        hourlyData[`${hour}h`] = (hourlyData[`${hour}h`] || 0) + (t.total_amount || 0);
+                    });
+
+                    const currentHour = new Date().getHours();
+                    const chartDataArray = [];
+                    for (let i = 7; i >= 0; i--) {
+                        const hour = (currentHour - i + 24) % 24;
+                        chartDataArray.push({ name: `${hour}h`, sales: hourlyData[`${hour}h`] || 0 });
+                    }
+                    setChartData(chartDataArray);
+                }
+            } catch (err: any) {
+                console.error('❌ [Dashboard] Error:', err);
+                if (mounted) {
+                    setError(err.message || 'Erro ao carregar dados do dashboard.');
+                }
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+
+        // Realtime: Recarrega dados ao detectar mudanças nas tabelas
+        const channel = supabase
+            .channel('dashboard-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+                if (mounted) fetchDashboardData();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+                if (mounted) fetchDashboardData();
+            })
+            .subscribe();
+
+        return () => {
+            mounted = false; // A variável morre aqui (Cleanup)
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+    if (isMobile) {
+        return <MobileDashboard />;
+    }
+
     return (
         <div className="space-y-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Vendas de Hoje" value="R$ 4.250,00" change="12" icon={DollarSign} trend="up" />
-                <StatCard title="Clientes Ativos" value="54" change="8" icon={Users} trend="up" />
-                <StatCard title="Itens Vendidos" value="186" change="4" icon={Package} trend="up" />
-                <StatCard title="Lucro Bruto" value="R$ 1.845,00" change="2" icon={TrendingUp} trend="down" />
-            </div>
+            {error && (
+                <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-3xl flex items-center justify-between text-red-400 animate-in slide-in-from-top-4 duration-500">
+                    <span className="flex items-center gap-3 text-sm font-bold">
+                        <Activity className="w-5 h-5 animate-pulse" />
+                        {error}
+                    </span>
+                    <button
+                        onClick={() => navigate('/diag')}
+                        className="bg-red-500 text-white px-4 py-1.5 rounded-xl text-xs font-black uppercase hover:bg-red-600 transition-colors"
+                    >
+                        Abrir Diagnóstico
+                    </button>
+                </div>
+            )}
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-md gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-white">Dashboard Central</h1>
+                    <p className="text-muted mt-1">Bem-vindo ao centro de comando do SmartBar.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    {role === 'admin' && (
+                        <div className="flex items-center gap-3 bg-black/20 p-1.5 rounded-xl border border-white/5">
+                            <div className={cn(
+                                "px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all",
+                                currentSession ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
+                            )}>
+                                {currentSession ? (
+                                    <>
+                                        <Store className="w-4 h-4" />
+                                        Caixa Aberto
+                                    </>
+                                ) : (
+                                    <>
+                                        <Lock className="w-4 h-4" />
+                                        Caixa Fechado
+                                    </>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => setShowCashierManager(true)}
+                                className={cn(
+                                    "px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all hover:scale-105 active:scale-95",
+                                    currentSession
+                                        ? "bg-red-500 hover:bg-red-600 text-white"
+                                        : "bg-green-500 hover:bg-green-600 text-white"
+                                )}
+                            >
+                                {currentSession ? 'Fechar Caixa' : 'Abrir Caixa'}
+                            </button>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => navigate('/pos')}
+                        className="btn-primary flex items-center gap-2"
+                    >
+                        <Plus className="w-5 h-5" /> Venda
+                    </button>
+                </div>
+            </header>
+
+            {/* KPI Stats */}
+            <DashboardStats
+                todaySales={stats.todaySales}
+                todayProfit={stats.todayProfit}
+                itemsSold={stats.itemsSold}
+                transactionCount={stats.transactionCount}
+                loading={loading}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Sales Chart */}
                 <div className="lg:col-span-2 glass-card p-6">
                     <div className="flex justify-between items-center mb-6">
-                        <h4 className="text-lg font-semibold font-medium">Fluxo de Vendas (Últimas 6h)</h4>
-                        <div className="flex gap-2">
-                            <span className="flex items-center gap-2 text-xs text-muted">
-                                <span className="w-2 h-2 rounded-full bg-primary"></span> Receita
-                            </span>
-                        </div>
+                        <h3 className="text-xl font-bold">Fluxo de Vendas (Hoje)</h3>
+                        <span className="bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">
+                            Tempo Real
+                        </span>
                     </div>
-                    <div className="h-80 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data}>
+                    <div className="h-[300px] w-full min-h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+                            <AreaChart data={chartData}>
                                 <defs>
                                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
                                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                                <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff10', borderRadius: '12px', color: '#f8fafc' }}
-                                    itemStyle={{ color: '#3b82f6' }}
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                <XAxis
+                                    dataKey="name"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: '#64748b', fontSize: 12 }}
                                 />
-                                <Area type="monotone" dataKey="sales" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                                <YAxis hide />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                    itemStyle={{ color: '#f8fafc' }}
+                                    formatter={(value: any) => [`R$ ${value.toFixed(2)}`, 'Vendas']}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="sales"
+                                    stroke="#3b82f6"
+                                    strokeWidth={3}
+                                    fillOpacity={1}
+                                    fill="url(#colorSales)"
+                                />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Alerts & Notifications */}
+                {/* Stock Alerts */}
                 <div className="glass-card p-6">
-                    <h4 className="text-lg font-semibold mb-6">Alertas de Estoque</h4>
+                    <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                        <AlertCircle className="text-yellow-500 w-5 h-5" />
+                        Alertas de Estoque
+                    </h3>
                     <div className="space-y-4">
-                        {[
-                            { item: 'Heineken 330ml', stock: '8 unidades', status: 'Crítico' },
-                            { item: 'Gin Tanqueray', stock: '2 garrafas', status: 'Baixo' },
-                            { item: 'Gelo de Côco', stock: '12 pacotes', status: 'Repor em breve' },
-                            { item: 'Red Bull Sugarfree', stock: '5 unidades', status: 'Baixo' },
-                        ].map((alert, i) => (
-                            <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
-                                <div className={`p-2 rounded-lg ${alert.status === 'Crítico' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                                    <AlertCircle className="w-5 h-5" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium">{alert.item}</p>
-                                    <p className="text-xs text-muted">{alert.stock}</p>
-                                </div>
-                                <span className={`text-[10px] font-bold uppercase tracking-wider ${alert.status === 'Crítico' ? 'text-red-500' : 'text-yellow-500'}`}>
-                                    {alert.status}
-                                </span>
+                        {loading ? (
+                            <div className="flex items-center justify-center py-10">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
                             </div>
-                        ))}
-                        <button className="w-full btn-outline text-sm mt-4">Ver Estoque Completo</button>
+                        ) : stockAlerts.length === 0 ? (
+                            <p className="text-center text-muted py-10 text-sm">
+                                ✅ Estoque em níveis normais!
+                            </p>
+                        ) : (
+                            stockAlerts.map(p => (
+                                <StockAlertItem
+                                    key={p.id}
+                                    name={p.name}
+                                    stock={p.stock_quantity}
+                                    min={p.min_stock_alert}
+                                />
+                            ))
+                        )}
                     </div>
-                </div>
-            </div>
-
-            {/* Recent Orders Table */}
-            <div className="glass-card p-6 overflow-hidden">
-                <h4 className="text-lg font-semibold mb-6">Últimos Pedidos</h4>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="border-b border-white/5 text-muted text-sm">
-                                <th className="pb-4 font-medium">Pedido</th>
-                                <th className="pb-4 font-medium">Mesa</th>
-                                <th className="pb-4 font-medium">Item</th>
-                                <th className="pb-4 font-medium">Status</th>
-                                <th className="pb-4 font-medium text-right">Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {[
-                                { id: '#1289', table: 'Mesa 04', item: '2x Moscow Mule', status: 'Pronto', value: 'R$ 76,00' },
-                                { id: '#1288', table: 'Balcão', item: '1x Burger Classic', status: 'Na Cozinha', value: 'R$ 42,00' },
-                                { id: '#1287', table: 'Mesa 12', item: '3x Chopp Artesanal', status: 'Pronto', value: 'R$ 54,00' },
-                                { id: '#1286', table: 'Mesa 08', item: '1x Combo Gin', status: 'Preparando', value: 'R$ 210,00' },
-                            ].map((order, i) => (
-                                <tr key={i} className="group hover:bg-white/5 transition-colors">
-                                    <td className="py-4 font-medium text-primary">{order.id}</td>
-                                    <td className="py-4 text-sm">{order.table}</td>
-                                    <td className="py-4 text-sm">{order.item}</td>
-                                    <td className="py-4">
-                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase ${order.status === 'Pronto' ? 'bg-green-500/10 text-green-500' :
-                                                order.status === 'Na Cozinha' ? 'bg-orange-500/10 text-orange-500' :
-                                                    'bg-blue-500/10 text-blue-500'
-                                            }`}>
-                                            {order.status}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 text-sm font-bold text-right">{order.value}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <Link to="/inventory" className="btn-outline w-full mt-6 flex items-center justify-center gap-2">
+                        Ver Inventário Completo
+                    </Link>
+                    <CashierManager
+                        isOpen={showCashierManager}
+                        onClose={() => setShowCashierManager(false)}
+                    />
                 </div>
             </div>
         </div>

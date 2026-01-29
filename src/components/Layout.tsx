@@ -1,98 +1,198 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
     Package,
-    BarChart3,
+    Receipt,
     Calendar,
-    MessageSquare,
     Settings,
-    Scan,
-    TrendingUp,
-    AlertTriangle,
     LogOut,
-    Bell
+    User,
+    Users,
+    Zap,
+    BarChart3,
+    CreditCard,
+    MessageSquare,
+    Bell,
+    Check,
+    X,
+    ChefHat,
+    QrCode,
+    Activity
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import { supabase } from '../lib/supabase';
+import { useNotifications } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
+import { useViewport } from '../hooks/useViewport';
+import MobileLayout from './mobile/MobileLayout';
 
-const Layout = ({ children }: { children: React.ReactNode }) => {
-    const [activeTab, setActiveTab] = useState('dashboard');
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
-    const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'inventory', label: 'Estoque', icon: Package },
-        { id: 'finance', label: 'Financeiro', icon: BarChart3 },
-        { id: 'agenda', label: 'Agenda', icon: Calendar },
-        { id: 'automation', label: 'Automação', icon: MessageSquare },
-    ];
+interface LayoutProps {
+    children: React.ReactNode;
+}
+
+const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { id: 'pos', label: 'Venda', icon: Zap, path: '/pos' },
+    { id: 'kitchen', label: 'Cozinha', icon: ChefHat, path: '/kitchen' },
+    { id: 'team', label: 'Equipe', icon: Users, path: '/team' },
+    { id: 'tables', label: 'Mesas', icon: QrCode, path: '/tables' },
+    { id: 'inventory', label: 'Estoque', icon: Package, path: '/inventory' },
+    { id: 'finance', label: 'Financeiro', icon: Receipt, path: '/finance' },
+    { id: 'reports', label: 'Relatórios', icon: BarChart3, path: '/reports' },
+    { id: 'agenda', label: 'Agenda', icon: Calendar, path: '/agenda' },
+    { id: 'automation', label: 'Automação', icon: MessageSquare, path: '/automation' },
+    { id: 'menu-manager', label: 'Cardápio', icon: ChefHat, path: '/menu-manager' },
+];
+
+const Layout = ({ children }: LayoutProps) => {
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { isMobile } = useViewport();
+    const [isCollapsed, setIsCollapsed] = React.useState(false);
+    const { unreadCount } = useNotifications();
+    const { signOut } = useAuth();
+
+    if (isMobile) {
+        return <MobileLayout>{children}</MobileLayout>;
+    }
 
     return (
-        <div className="flex min-h-screen bg-background text-foreground font-sans">
+        <div className="flex min-h-screen bg-background text-foreground overflow-hidden">
             {/* Sidebar */}
-            <aside className="w-64 border-r border-white/5 bg-background flex flex-col fixed h-full z-50">
-                <div className="p-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
-                            <BarChart3 className="text-white w-6 h-6" />
-                        </div>
-                        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-muted bg-clip-text text-transparent">
-                            SmartBar
-                        </h1>
+            <aside className={cn(
+                "border-r border-white/10 flex flex-col glass-card m-4 mr-0 rounded-3xl h-[calc(100vh-2rem)] overflow-hidden transition-all duration-500 ease-in-out shadow-2xl shadow-black/50 relative z-50",
+                isCollapsed ? "w-24" : "w-64"
+            )}>
+                <div className={cn("p-8 transition-all duration-500", isCollapsed && "px-6")}>
+                    <div
+                        className="flex items-center gap-3 cursor-pointer group"
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        title={isCollapsed ? "Expandir Menu" : "Recolher Menu"}
+                    >
+                        <img
+                            src="https://public.readdy.ai/ai/img_res/4ced1042-ca06-43d9-9c63-861d1f714373.png"
+                            alt="SmartBar Logo"
+                            className={cn("h-10 w-auto transition-all duration-500", isCollapsed ? "h-8" : "h-10")}
+                        />
+                        {!isCollapsed && (
+                            <h1 className="text-xl font-bold tracking-tight animate-in fade-in slide-in-from-left-2 duration-300">
+                                Smart<span className="text-primary">Bar</span>
+                            </h1>
+                        )}
                     </div>
                 </div>
 
-                <nav className="flex-1 px-4 py-4 space-y-1">
+                <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto custom-scrollbar">
                     {navItems.map((item) => (
-                        <button
+                        <Link
                             key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            className={`nav-item w-full ${activeTab === item.id ? 'active' : ''}`}
+                            to={item.path}
+                            className={cn(
+                                "nav-item flex items-center gap-4 transition-all duration-300",
+                                isCollapsed && "justify-center px-0",
+                                location.pathname === item.path && "active"
+                            )}
+                            title={isCollapsed ? item.label : ""}
                         >
-                            <item.icon className="w-5 h-5" />
-                            <span>{item.label}</span>
-                        </button>
+                            <item.icon className="w-5 h-5 shrink-0" />
+                            {!isCollapsed && (
+                                <span className="font-medium animate-in fade-in slide-in-from-left-2 duration-300">{item.label}</span>
+                            )}
+                        </Link>
                     ))}
+
+                    <div className="pt-4 mt-4 border-t border-white/10 relative">
+                        <Link
+                            to="/notifications"
+                            className={cn(
+                                "nav-item w-full flex items-center gap-4 transition-all duration-300 relative",
+                                isCollapsed && "justify-center px-0",
+                                location.pathname === '/notifications' && "active"
+                            )}
+                            title={isCollapsed ? "Notificações" : ""}
+                        >
+                            <div className="relative">
+                                <Bell className="w-5 h-5 shrink-0" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#020617]" />
+                                )}
+                            </div>
+                            {!isCollapsed && (
+                                <div className="flex-1 flex justify-between items-center">
+                                    <span className="font-medium">Notificações</span>
+                                    {unreadCount > 0 && (
+                                        <span className="bg-primary/20 text-primary text-[10px] font-black px-2 py-0.5 rounded-full">
+                                            {unreadCount}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </Link>
+                    </div>
+
+                    <div className="pt-4 mt-4 border-t border-white/10">
+                        <Link
+                            to="/pricing"
+                            className={cn(
+                                "nav-item text-amber-400 hover:bg-amber-500/10 transition-all duration-300",
+                                isCollapsed && "justify-center px-0",
+                                location.pathname === '/pricing' && "active"
+                            )}
+                            title={isCollapsed ? "Planos Pro" : ""}
+                        >
+                            <CreditCard className="w-5 h-5 shrink-0" />
+                            {!isCollapsed && (
+                                <span className="animate-in fade-in slide-in-from-left-2 duration-300">Planos Pro</span>
+                            )}
+                        </Link>
+                    </div>
                 </nav>
 
-                <div className="p-4 mt-auto">
-                    <div className="glass-card p-4 space-y-3">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-secondary/20 border border-secondary/30 flex items-center justify-center">
-                                <span className="text-secondary font-bold text-sm">JD</span>
-                            </div>
-                            <div className="flex-1 overflow-hidden">
-                                <p className="text-sm font-medium truncate">João Dono</p>
-                                <p className="text-xs text-muted truncate">Admin</p>
-                            </div>
-                        </div>
-                        <button className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors pt-2">
-                            <LogOut className="w-4 h-4" />
-                            Sair
-                        </button>
-                    </div>
+                <div className="p-4 border-t border-white/10 space-y-2">
+                    <button
+                        onClick={() => navigate('/settings')}
+                        className={cn(
+                            "nav-item w-full transition-all duration-300",
+                            isCollapsed && "justify-center px-0",
+                            location.pathname === '/settings' && "active"
+                        )}
+                        title={isCollapsed ? "Configurações" : ""}
+                    >
+                        <Settings className="w-5 h-5 shrink-0" />
+                        {!isCollapsed && (
+                            <span className="animate-in fade-in slide-in-from-left-2 duration-300">Configurações</span>
+                        )}
+                    </button>
+                    <button
+                        onClick={async () => {
+                            await signOut();
+                            navigate('/login', { replace: true });
+                        }}
+                        className={cn(
+                            "nav-item w-full text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-300",
+                            isCollapsed && "justify-center px-0"
+                        )}
+                        title={isCollapsed ? "Sair" : ""}
+                    >
+                        <LogOut className="w-5 h-5 shrink-0" />
+                        {!isCollapsed && (
+                            <span className="animate-in fade-in slide-in-from-left-2 duration-300">Sair</span>
+                        )}
+                    </button>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 ml-64 p-8 relative overflow-y-auto">
-                {/* Header */}
-                <header className="flex justify-between items-center mb-10">
-                    <div>
-                        <h2 className="text-3xl font-bold">Resumo Geral</h2>
-                        <p className="text-muted mt-1">Bem-vindo de volta! Aqui está o status do seu bar hoje.</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <button className="p-2.5 glass-card hover:bg-white/10 relative">
-                            <Bell className="w-5 h-5" />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-                        </button>
-                        <button className="btn-primary flex items-center gap-2">
-                            <Scan className="w-5 h-5" />
-                            Scanner
-                        </button>
-                    </div>
-                </header>
-
-                {children}
+            <main className="flex-1 overflow-y-auto p-8 relative custom-scrollbar">
+                <div className="max-w-6xl mx-auto">
+                    {children}
+                </div>
             </main>
         </div>
     );

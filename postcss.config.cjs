@@ -1,4 +1,4 @@
 module.exports = {
-    // Empty to prevent Vite from searching for postcss.config.js in parent directories
+    // Isso bloqueia a herança de configurações de pastas acima
     plugins: {}
 };
