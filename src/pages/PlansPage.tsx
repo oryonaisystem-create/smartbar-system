@@ -29,11 +29,9 @@ const PlansPage = () => {
 
     if (planLoading) {
         return (
-            <Layout>
-                <div className="flex bg-[#020617] items-center justify-center min-h-[60vh]">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                </div>
-            </Layout>
+            <div className="flex bg-[#020617] items-center justify-center min-h-[60vh]">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
         );
     }
 
