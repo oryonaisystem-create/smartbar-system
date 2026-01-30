@@ -267,7 +267,7 @@ const Login = () => {
 
             <div className="absolute bottom-10 text-center w-full">
                 <p className="text-[10px] text-muted font-black tracking-[0.3em] uppercase opacity-20">© 2026 SMARTBAR INTELLIGENCE SYSTEM</p>
-                <p className="text-[8px] text-muted/30 font-mono mt-1">v.FIX.1.1 (Admin Default)</p>
+                <p className="text-[8px] text-muted/30 font-mono mt-1">v.SAAS.PURE.2.0</p>
             </div>
         </div>
     );
