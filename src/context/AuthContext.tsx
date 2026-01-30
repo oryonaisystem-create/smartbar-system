@@ -63,9 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         .insert([{
                             id: currentSession.user.id,
                             email: currentSession.user.email,
-                            role: 'admin', // DEFAULT ADMIN
-                            username: currentSession.user.user_metadata.full_name || currentSession.user.email?.split('@')[0] || 'Novo Usuário',
-                            full_name: currentSession.user.user_metadata.full_name
+                            role: 'admin' // DEFAULT ADMIN
                         }]);
 
                     if (insertError) {
