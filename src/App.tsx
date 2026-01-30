@@ -29,6 +29,7 @@ import LandingPage from './pages/LandingPage';
 import StaffLogin from './pages/StaffLogin';
 import FeedbackPage from './pages/FeedbackPage';
 import WaiterPOS from './pages/WaiterPOS';
+import { Diagnostic } from './pages/Diagnostic';
 
 // Check if staff is logged in via localStorage
 function getStaffSession() {
@@ -165,6 +166,7 @@ function App() {
               {/* Standalone Routes */}
               <Route path="/download" element={<DownloadPage />} />
               <Route path="/menu" element={<PublicMenu />} />
+              <Route path="/diag" element={<Diagnostic />} />
 
               {/* Main App Layout */}
               <Route path="/*" element={
