@@ -10,19 +10,35 @@ const PlansPage = () => {
 
     const handleUpgrade = async () => {
         setBillingLoading(true);
-        // MOCK MERCADO PAGO FLOW
         try {
-            // In a real app, we would call an edge function here to create a preference
-            // const { data } = await supabase.functions.invoke('create-mp-preference', { ... })
-            // window.location.href = data.init_point;
-
-            console.log("Redirecting to Mercado Pago Checkout...");
-            setTimeout(() => {
-                alert("Simulação: Redirecionando para Mercado Pago... (Integração Backend necessária)");
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user?.email) {
+                alert("Erro: Usuário não identificado.");
                 setBillingLoading(false);
-            }, 1000);
+                return;
+            }
+
+            const response = await fetch('/api/create-checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: session.user.email,
+                    price: 99.90,
+                    title: 'Assinatura Pro - SmartBar System'
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.init_point) {
+                console.log("Redirecting to Mercado Pago:", data.init_point);
+                window.location.href = data.init_point;
+            } else {
+                throw new Error('Link de pagamento não gerado');
+            }
         } catch (error) {
             console.error(error);
+            alert("Erro ao gerar pagamento. Tente novamente.");
             setBillingLoading(false);
         }
     };
