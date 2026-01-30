@@ -53,89 +53,96 @@ const PlansPage = () => {
                     {/* BASIC PLAN */}
                     <div className={`
                         relative group p-8 rounded-3xl border transition-all duration-300
-                        ${plan === 'basic' ? 'bg-white/5 border-primary/50 shadow-2xl shadow-primary/10' : 'bg-[#0f172a]/50 border-white/5 hover:border-white/10'}
+                        ${plan === 'basic' ? 'bg-[#0f172a] border-primary/50 shadow-2xl shadow-primary/10' : 'bg-[#0f172a]/50 border-white/5 hover:border-white/10'}
                     `}>
-                        {plan === 'basic' && (
-                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary/20 text-primary border border-primary/50 px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">
-                                Seu Plano Atual
-                            </div>
-                        )}
                         <div className="flex justify-between items-start mb-8">
                             <div>
                                 <h3 className="text-2xl font-bold text-white mb-2">Basic</h3>
-                                <p className="text-muted/60 text-sm">Essencial para operações ágeis.</p>
+                                <p className="text-muted/60 text-sm">Ideal para começar.</p>
                             </div>
                             <Zap className="w-10 h-10 text-white/20" />
                         </div>
-                        <div className="mb-8">
+                        <div className="mb-4">
                             <span className="text-4xl font-black text-white">R$ 49,90</span>
                             <span className="text-muted text-sm">/mês</span>
                         </div>
+                        <div className="mb-8 p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
+                            <p className="text-xs text-green-400 font-bold uppercase tracking-wide flex items-center gap-2">
+                                <Star className="w-3 h-3 fill-green-400" />
+                                30 Dias Grátis (Trial)
+                            </p>
+                        </div>
                         <ul className="space-y-4 mb-8">
                             {[
-                                'PDV Completo',
-                                'Controle de Caixa',
-                                'Gestão de Estoque',
-                                'KDS (Cozinha)',
-                                'Relatórios Diários'
+                                'PDV (Ponto de Venda)',
+                                'Controle de Estoque',
+                                'Financeiro',
+                                'Relatórios'
                             ].map((feature) => (
                                 <li key={feature} className="flex items-center gap-3 text-sm text-gray-300">
-                                    <Check className="w-4 h-4 text-primary" />
+                                    <div className="bg-white/10 rounded-full p-0.5">
+                                        <Check className="w-3 h-3 text-green-400" />
+                                    </div>
                                     {feature}
                                 </li>
                             ))}
                         </ul>
-                        <button disabled={true} className="w-full py-4 rounded-xl font-bold bg-white/5 text-muted cursor-not-allowed">
-                            {plan === 'basic' ? 'Plano Ativo' : 'Downgrade'}
+                        <button
+                            disabled={plan === 'basic'}
+                            className={`
+                                w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all
+                                ${plan === 'basic'
+                                    ? 'bg-white/5 text-muted cursor-default border border-white/5'
+                                    : 'bg-white text-black hover:bg-gray-100 font-black'
+                                }
+                            `}
+                        >
+                            {plan === 'basic' ? 'Plano Atual' : 'Usar Gratuito (30 dias)'}
                         </button>
                     </div>
 
                     {/* PRO PLAN */}
                     <div className={`
                         relative group p-8 rounded-3xl border transition-all duration-300 overflow-hidden
-                        ${plan === 'pro' ? 'bg-primary/10 border-primary shadow-2xl shadow-primary/20' : 'bg-[#0f172a] border-white/10 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5'}
+                        ${plan === 'pro'
+                            ? 'bg-primary/10 border-primary shadow-2xl shadow-primary/20'
+                            : 'bg-[#0f172a] border-blue-500/30 hover:border-blue-500 shadow-2xl shadow-blue-900/20'
+                        }
                     `}>
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Star className="w-48 h-48 text-primary rotate-12" />
-                        </div>
-
                         {plan === 'pro' && (
-                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-orange-500 text-black border border-white/20 px-6 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">
-                                Plano Recomendado
+                            <div className="absolute top-0 right-0 bg-primary text-white px-4 py-1 rounded-bl-xl text-xs font-black uppercase tracking-widest">
+                                Ativo
                             </div>
                         )}
 
                         <div className="flex justify-between items-start mb-8 relative">
                             <div>
                                 <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                                    Pro <ShieldCheck className="w-5 h-5 text-amber-400" />
+                                    Pro <ShieldCheck className="w-5 h-5 text-blue-400" />
                                 </h3>
-                                <p className="text-muted/60 text-sm">Inteligência e escala para líderes.</p>
+                                <p className="text-muted/60 text-sm">Escala e automação total.</p>
                             </div>
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg">
-                                <Star className="w-6 h-6 text-black fill-black" />
+                            <div className="w-12 h-12 rounded-xl bg-blue-600/20 flex items-center justify-center shadow-lg border border-blue-500/30">
+                                <Star className="w-6 h-6 text-blue-500" />
                             </div>
                         </div>
 
                         <div className="mb-8 relative">
                             <span className="text-5xl font-black text-white">R$ 99,90</span>
                             <span className="text-muted text-sm">/mês</span>
-                            <div className="text-xs text-green-400 font-bold mt-2 uppercase tracking-wide">
-                                7 dias Trial Grátis (Novo Usuário)
-                            </div>
+                            <p className="text-xs text-blue-400 mt-2 font-medium">Cobrança imediata no cartão</p>
                         </div>
 
                         <ul className="space-y-4 mb-8 relative">
                             {[
                                 'Tudo do Basic',
-                                'Relatórios Avançados',
-                                'IA Insights & Previsões',
-                                'Telemetria em Tempo Real',
-                                'Automações de Marketing',
-                                'Prioridade no Suporte'
+                                'Agenda de Reservas',
+                                'Automação WhatsApp',
+                                'Integrações API',
+                                'Suporte Prioritário'
                             ].map((feature) => (
                                 <li key={feature} className="flex items-center gap-3 text-sm text-white font-medium">
-                                    <div className="bg-gradient-to-r from-amber-400 to-orange-500 rounded-full p-0.5">
+                                    <div className="bg-blue-500 rounded-full p-0.5">
                                         <Check className="w-3 h-3 text-black" />
                                     </div>
                                     {feature}
@@ -150,12 +157,12 @@ const PlansPage = () => {
                                 w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 relative overflow-hidden transition-all
                                 ${plan === 'pro'
                                     ? 'bg-primary/20 text-primary cursor-default'
-                                    : 'bg-gradient-to-r from-primary to-orange-600 hover:scale-[1.02] active:scale-95 text-white shadow-lg shadow-primary/25'
+                                    : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:scale-[1.02] active:scale-95 text-white shadow-lg shadow-blue-500/25'
                                 }
                             `}
                         >
                             {billingLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                                plan === 'pro' ? 'Plano Ativo' : 'Atualizar para PRO'
+                                plan === 'pro' ? 'Plano Atual' : 'Assinar Pro (Cartão)'
                             )}
                         </button>
                     </div>
