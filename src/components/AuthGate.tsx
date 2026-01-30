@@ -11,6 +11,11 @@ interface AuthGateProps {
 export const AuthGate = ({ children }: AuthGateProps) => {
     const { status, error } = useAuth();
 
+    // 0. EMERGENCY BYPASS
+    if (window.location.pathname === '/diag') {
+        return <>{children}</>;
+    }
+
     // 1. BOOTING: Starting up, initial Session check
     if (status === 'booting') {
         return (

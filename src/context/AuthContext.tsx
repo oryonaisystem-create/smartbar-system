@@ -35,11 +35,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setStatus('loading_profile');
             try {
                 // 1. Fetch Profile
-                const { data: profile, error: profileError } = await supabase
+                // 1. Fetch Profile with Timeout
+                const fetchProfilePromise = supabase
                     .from('profiles')
                     .select('role, avatar_url')
                     .eq('id', currentSession.user.id)
                     .single();
+
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Profile fetch timed out')), 10000)
+                );
+
+                // @ts-ignore
+                const { data: profile, error: profileError } = await Promise.race([fetchProfilePromise, timeoutPromise]);
 
                 if (profileError && profileError.code === 'PGRST116') {
                     // 2. Profile Missing -> CREATE (SaaS Logic: Default to Admin)
