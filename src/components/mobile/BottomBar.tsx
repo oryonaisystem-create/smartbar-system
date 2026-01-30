@@ -24,7 +24,7 @@ const BottomBar = ({ onOpenMore, onOpenCashier }: BottomBarProps) => {
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2 bg-gradient-to-t from-[#020617] via-[#020617]/95 to-transparent backdrop-blur-lg border-t border-white/5">
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2 safe-area-bottom bg-gradient-to-t from-[#020617] via-[#020617]/95 to-transparent backdrop-blur-lg border-t border-white/5 pointer-events-auto">
             <nav className="flex items-center justify-between max-w-lg mx-auto bg-white/5 p-1 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-2xl">
                 {navItems.map((item) => (
                     <NavLink

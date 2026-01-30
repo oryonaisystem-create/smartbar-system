@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase';
 import { Package, Search, Plus } from 'lucide-react';
 import { ProductScanner } from '../components/ProductScanner';
 import { ProductModal } from '../components/ProductModal';
+import { LoadingState } from '../components/ui/LoadingState';
+import { ErrorMessage } from '../components/ui/ErrorMessage';
 
 export interface Product {
     id: string;
@@ -31,6 +33,7 @@ export const getStockStatus = (p: Product) => {
 const Inventory = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [showScanner, setShowScanner] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -41,6 +44,7 @@ const Inventory = () => {
 
     const fetchProducts = async () => {
         setLoading(true);
+        setError(null);
         try {
             const { data, error } = await supabase
                 .from('products')
@@ -49,9 +53,7 @@ const Inventory = () => {
 
             if (error) {
                 console.error('❌ Erro Supabase (Estoque):', error);
-                if (error.code === '42P01') {
-                    alert('ERRO: Tabela "products" não existe no banco!');
-                }
+                throw error;
             }
             if (data) {
                 console.log('📦 Produtos recebidos:', data.length);
@@ -61,6 +63,7 @@ const Inventory = () => {
             }
         } catch (error: any) {
             console.error('Erro ao buscar produtos:', error);
+            setError(error.message || 'Erro desconhecido ao carregar estoque.');
         } finally {
             setLoading(false);
         }
@@ -120,6 +123,9 @@ const Inventory = () => {
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.barcode?.includes(searchTerm)
     );
+
+    if (loading) return <LoadingState message="Carregando estoque..." />;
+    if (error) return <ErrorMessage message={error} onRetry={fetchProducts} />;
 
     return (
         <div className="space-y-6">

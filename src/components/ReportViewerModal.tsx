@@ -317,8 +317,8 @@ export const ReportViewerModal = ({ isOpen, onClose, reportType }: ReportViewerM
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="glass-card w-full max-w-lg overflow-hidden border-white/10 shadow-3xl animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300 safe-area">
+            <div className="glass-card w-full max-w-lg overflow-hidden border-white/10 shadow-3xl animate-in zoom-in-95 duration-300 max-h-[85vh] flex flex-col">
                 <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/[0.03]">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-primary/10 rounded-xl">
@@ -334,7 +334,7 @@ export const ReportViewerModal = ({ isOpen, onClose, reportType }: ReportViewerM
                     </button>
                 </div>
 
-                <div className="p-8">
+                <div className="p-8 overflow-y-auto custom-scrollbar">
                     {renderContent()}
                 </div>
 

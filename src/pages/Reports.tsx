@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { ReportViewerModal } from '../components/ReportViewerModal';
 import { supabase } from '../lib/supabase';
+import { LoadingState } from '../components/ui/LoadingState';
+import { ErrorMessage } from '../components/ui/ErrorMessage';
 
 // Helper to trigger a real browser download
 export const downloadFile = (content: string, fileName: string, contentType: string) => {
@@ -36,18 +38,27 @@ const Reports = () => {
         cac: 12.10
     });
     const [topProducts, setTopProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchRealMetrics();
     }, []);
 
     const fetchRealMetrics = async () => {
+        setLoading(true);
+        setError(null);
         try {
             // Fetch total sales and count for Ticket Médio
-            const { data: transactions, error } = await supabase
+            const { data: transactions, error: tError } = await supabase
                 .from('transactions')
                 .select('total_amount')
                 .eq('type', 'sale');
+
+            if (tError) {
+                console.error("❌ Erro ao buscar transações:", tError);
+                throw new Error("Não foi possível carregar os dados de vendas.");
+            }
 
             if (transactions) {
                 console.log(`📊 Reports: Received ${transactions.length} transactions`);
@@ -65,7 +76,10 @@ const Reports = () => {
                 .order('stock_quantity', { ascending: false })
                 .limit(4);
 
-            if (pError) console.error("❌ Erro ao buscar produtos (Reports):", pError);
+            if (pError) {
+                console.error("❌ Erro ao buscar produtos:", pError);
+                throw new Error("Não foi possível carregar o ranking de produtos.");
+            }
 
             if (products) {
                 console.log(`📊 Reports: Received ${products.length} products for ranking`);
@@ -83,15 +97,20 @@ const Reports = () => {
                 }));
 
                 // Update real margin metric based on average of displayed products
-                const totalMargin = products.reduce((acc, p) => {
-                    const price = p.price || 0;
-                    const cost = p.cost_price || 0;
-                    return acc + (price > 0 ? ((price - cost) / price) * 100 : 0);
-                }, 0);
-                setMetrics(prev => ({ ...prev, margem: Math.round(totalMargin / products.length) || 0 }));
+                if (products.length > 0) {
+                    const totalMargin = products.reduce((acc, p) => {
+                        const price = p.price || 0;
+                        const cost = p.cost_price || 0;
+                        return acc + (price > 0 ? ((price - cost) / price) * 100 : 0);
+                    }, 0);
+                    setMetrics(prev => ({ ...prev, margem: Math.round(totalMargin / products.length) || 0 }));
+                }
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error fetching report metrics:", err);
+            setError(err.message || 'Erro desconhecido ao carregar relatórios.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -131,6 +150,9 @@ const Reports = () => {
         setSelectedReport(title);
         setIsViewerOpen(true);
     };
+
+    if (loading) return <LoadingState message="Calculando indicadores..." />;
+    if (error) return <ErrorMessage message={error} onRetry={fetchRealMetrics} />;
 
     return (
         <div className="space-y-6">

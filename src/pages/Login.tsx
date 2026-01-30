@@ -61,15 +61,6 @@ const Login = () => {
             if (view === 'login') {
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-                // BYPASS for Patrick (Owner) - Legacy check
-                if (error && email === 'patrick.contatos@hotmail.com' && password === '147369') {
-                    const { error: signUpError } = await supabase.auth.signUp({ email, password });
-                    if (!signUpError) {
-                        const { error: finalSignInError } = await supabase.auth.signInWithPassword({ email, password });
-                        if (!finalSignInError) return;
-                    }
-                }
-
                 if (error) {
                     if (error.message === "Invalid login credentials") {
                         throw new Error("Credenciais Inválidas. Verifique e-mail e senha.");
@@ -77,24 +68,12 @@ const Login = () => {
                     throw error;
                 }
 
-                // --- SHIFT CONTROL CHECK ---
                 if (data.user) {
-                    const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
-                    let userRole = profile?.role || 'waiter';
-
-                    // Admin Override for Development/Patrick
-                    const normalizedEmail = email.toLowerCase().trim();
-                    if (normalizedEmail === 'patrick.contatos-smartbar@hotmail.com' || normalizedEmail === 'patrick.contatos@hotmail.com') {
-                        userRole = 'admin';
-                    }
-
-                    if (userRole !== 'admin') {
-                        const isShiftOpen = localStorage.getItem('smartbar_shift_open') === 'true';
-                        if (!isShiftOpen) {
-                            await signOut();
-                            throw new Error('⛔ EXPEDIENTE FECHADO. O login só é permitido quando o gerente abrir o caixa.');
-                        }
-                    }
+                    // ✅ PURE SAAS LOGIN (No Business Logic Here)
+                    // The AuthContext listener will detect the session change.
+                    // The App.tsx router will redirect based on 'session' existence.
+                    console.log('✅ [Login] Success. Session established.');
+                    return;
                 }
             } else {
                 const { error } = await supabase.auth.signUp({ email, password });
@@ -129,8 +108,14 @@ const Login = () => {
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]" />
 
-            <div className="glass-card w-full max-w-md p-10 border-white/10 shadow-3xl relative z-10 animate-in fade-in zoom-in duration-500">
-                <div className="flex justify-center mb-8 relative">
+            <div className="glass-card w-full max-w-md p-6 border-white/10 shadow-3xl relative z-10 animate-in fade-in zoom-in duration-500 max-h-[95vh] overflow-y-auto custom-scrollbar">
+                <div className="absolute top-4 left-4">
+                    <a href="/" className="text-muted hover:text-white transition-colors flex items-center gap-1 text-xs uppercase font-bold tracking-widest">
+                        <ArrowLeft className="w-3 h-3" /> Voltar
+                    </a>
+                </div>
+
+                <div className="flex justify-center mb-6 relative mt-4">
                     {view !== 'initial' && (
                         <button
                             onClick={() => setView('initial')}
@@ -139,18 +124,18 @@ const Login = () => {
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                     )}
-                    <img src={logoUrl} alt="Logo" className="h-12 w-auto animate-bounce-subtle" />
+                    <img src={logoUrl} alt="Logo" className="h-10 w-auto animate-bounce-subtle" />
                 </div>
 
-                <div className="text-center mb-10">
-                    <h1 className="text-3xl font-black text-white tracking-tighter mb-1 italic">
+                <div className="text-center mb-6">
+                    <h1 className="text-2xl font-black text-white tracking-tighter mb-1 italic">
                         {view === 'initial' ? 'Bem-vindo ao SmartBar' : view === 'login' ? 'Entrar' : 'Criar Conta'}
                     </h1>
-                    <p className="text-muted text-xs font-medium uppercase tracking-[0.2em]">SISTEMA DE INTELIGÊNCIA</p>
+                    <p className="text-muted text-[10px] font-medium uppercase tracking-[0.2em]">SISTEMA DE INTELIGÊNCIA</p>
                 </div>
 
                 {view === 'initial' ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <button
                             onClick={handleGoogleLogin}
                             disabled={loading}
@@ -282,6 +267,7 @@ const Login = () => {
 
             <div className="absolute bottom-10 text-center w-full">
                 <p className="text-[10px] text-muted font-black tracking-[0.3em] uppercase opacity-20">© 2026 SMARTBAR INTELLIGENCE SYSTEM</p>
+                <p className="text-[8px] text-muted/30 font-mono mt-1">v.FIX.1.1 (Admin Default)</p>
             </div>
         </div>
     );

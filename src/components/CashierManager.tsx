@@ -236,12 +236,12 @@ export const CashierManager = ({ isOpen, onClose }: CashierManagerProps) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="glass-card w-full max-w-sm overflow-hidden shadow-2xl border-white/10 relative">
-                <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-white/10 rounded-full transition-colors text-muted hover:text-white">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300 safe-area">
+            <div className="glass-card w-full max-w-sm overflow-hidden shadow-2xl border-white/10 relative max-h-[85vh] flex flex-col">
+                <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-white/10 rounded-full transition-colors text-muted hover:text-white z-20">
                     <X className="w-5 h-5" />
                 </button>
-                <div className="p-8">
+                <div className="p-8 overflow-y-auto custom-scrollbar">
                     {renderContent()}
                 </div>
             </div>

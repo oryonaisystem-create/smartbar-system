@@ -1,25 +1,44 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { useCashier } from '../context/CashierContext';
-import { useAuth } from '../context/AuthContext';
-import { DashboardStats } from '../components/DashboardStats';
-import { useNavigate, Link } from 'react-router-dom';
-import { cn } from '../lib/utils';
-import {
-    TrendingUp,
-    Users,
-    Package,
-    DollarSign,
-    AlertCircle,
-    ArrowUpRight,
-    ArrowDownRight,
-    ShoppingCart,
-    Plus,
-    Loader2,
-    Store,
-    Lock,
-    Activity
-} from 'lucide-react';
+import { LoadingState } from '../components/ui/LoadingState';
+import { ErrorMessage } from '../components/ui/ErrorMessage';
+
+// ... (keep StatCard and StockAlertItem)
+
+const Dashboard = () => {
+    const navigate = useNavigate();
+    const { isMobile } = useViewport();
+    const { currentSession, loading: loadingCashier } = useCashier();
+    const [showCashierManager, setShowCashierManager] = useState(false);
+    const { role } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // ... stats state ...
+
+    useEffect(() => {
+        let mounted = true;
+
+        const fetchDashboardData = async () => {
+            if (!mounted) return;
+            setLoading(true);
+            setError(null);
+            console.log('🔍 [Dashboard] Loading data...');
+
+            try {
+                // ... logic ...
+                // Note: The original logic in fetchDashboardData was good (try/catch setting error).
+                // I am strictly replacing the RENDER part in this MultiReplace, 
+                // but I need to make sure I don't lose the fetch logic.
+                // Wait, 'replace_file_content' replaces a block.
+                // I need to be careful not to delete fetchDashboardData logic if I select a huge block.
+                // I will use smaller chunks.
+            }
+         };
+        // ...
+    }, []);
+
+    // ...
+};
+
 import { CashierManager } from '../components/CashierManager';
 import {
     AreaChart,
@@ -227,22 +246,11 @@ const Dashboard = () => {
         return <MobileDashboard />;
     }
 
+    if (loading) return <LoadingState message="Atualizando painel..." />;
+    if (error) return <ErrorMessage message={error} onRetry={() => window.location.reload()} />;
+
     return (
         <div className="space-y-6">
-            {error && (
-                <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-3xl flex items-center justify-between text-red-400 animate-in slide-in-from-top-4 duration-500">
-                    <span className="flex items-center gap-3 text-sm font-bold">
-                        <Activity className="w-5 h-5 animate-pulse" />
-                        {error}
-                    </span>
-                    <button
-                        onClick={() => navigate('/diag')}
-                        className="bg-red-500 text-white px-4 py-1.5 rounded-xl text-xs font-black uppercase hover:bg-red-600 transition-colors"
-                    >
-                        Abrir Diagnóstico
-                    </button>
-                </div>
-            )}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-md gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-white">Dashboard Central</h1>
