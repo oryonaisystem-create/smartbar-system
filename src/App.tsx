@@ -142,6 +142,7 @@ function App() {
         <Route path="/menu" element={<PublicMenu />} />
         <Route path="/staff-login" element={<StaffLogin />} />
         <Route path="/feedback" element={<FeedbackPage />} />
+        <Route path="/diag" element={<Diagnostic />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
