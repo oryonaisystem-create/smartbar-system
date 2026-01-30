@@ -83,7 +83,8 @@ const Login = () => {
                     let userRole = profile?.role || 'waiter';
 
                     // Admin Override for Development/Patrick
-                    if (email === 'patrick.contatos-smartbar@hotmail.com' || email === 'patrick.contatos@hotmail.com') {
+                    const normalizedEmail = email.toLowerCase().trim();
+                    if (normalizedEmail === 'patrick.contatos-smartbar@hotmail.com' || normalizedEmail === 'patrick.contatos@hotmail.com') {
                         userRole = 'admin';
                     }
 
