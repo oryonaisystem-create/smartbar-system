@@ -33,7 +33,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 pending: "https://smartbar-system.vercel.app/pricing?status=pending"
             },
             auto_return: "approved",
-            external_reference: email // We use email to identify user for now, ideally ID
+            external_reference: email, // We use email to identify user for now, ideally ID
+            statement_descriptor: "SMARTBAR"
         };
 
         const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
