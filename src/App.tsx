@@ -87,6 +87,11 @@ function App() {
   // Check for staff session (localStorage based)
   const staffSession = getStaffSession();
 
+  // EMERGENCY DIAGNOSTIC ROUTE - Bypasses all auth/loading checks
+  if (window.location.pathname === '/diag') {
+    return <Diagnostic />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
