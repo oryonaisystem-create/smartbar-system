@@ -1,45 +1,26 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
-
-// ... (keep StatCard and StockAlertItem)
-
-const Dashboard = () => {
-    const navigate = useNavigate();
-    const { isMobile } = useViewport();
-    const { currentSession, loading: loadingCashier } = useCashier();
-    const [showCashierManager, setShowCashierManager] = useState(false);
-    const { role } = useAuth();
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    // ... stats state ...
-
-    useEffect(() => {
-        let mounted = true;
-
-        const fetchDashboardData = async () => {
-            if (!mounted) return;
-            setLoading(true);
-            setError(null);
-            console.log('🔍 [Dashboard] Loading data...');
-
-            try {
-                // ... logic ...
-                // Note: The original logic in fetchDashboardData was good (try/catch setting error).
-                // I am strictly replacing the RENDER part in this MultiReplace, 
-                // but I need to make sure I don't lose the fetch logic.
-                // Wait, 'replace_file_content' replaces a block.
-                // I need to be careful not to delete fetchDashboardData logic if I select a huge block.
-                // I will use smaller chunks.
-            }
-         };
-        // ...
-    }, []);
-
-    // ...
-};
-
 import { CashierManager } from '../components/CashierManager';
+import { useViewport } from '../hooks/useViewport';
+import { useCashier } from '../context/CashierContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { cn } from '../lib/utils';
+import {
+    ArrowUpRight,
+    ArrowDownRight,
+    Loader2,
+    Store,
+    Lock,
+    Plus,
+    AlertCircle,
+    DollarSign,
+    ShoppingBag,
+    TrendingUp,
+    Activity
+} from 'lucide-react';
 import {
     AreaChart,
     Area,
@@ -49,10 +30,9 @@ import {
     Tooltip,
     ResponsiveContainer
 } from 'recharts';
-import { useViewport } from '../hooks/useViewport';
 import MobileDashboard from './mobile/MobileDashboard';
 
-interface DashboardStats {
+interface DashboardStatsData {
     todaySales: number;
     todayProfit: number;
     itemsSold: number;
@@ -97,6 +77,41 @@ const StatCard = ({ title, value, change, icon: Icon, trend, path, loading }: an
     );
 };
 
+const DashboardStats = ({ todaySales, todayProfit, itemsSold, transactionCount, loading }: any) => {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard
+                title="Vendas Hoje"
+                value={`R$ ${todaySales.toFixed(2)}`}
+                icon={DollarSign}
+                loading={loading}
+                trend="up"
+                change={0} // To calculate later
+            />
+            <StatCard
+                title="Lucro Estimado"
+                value={`R$ ${todayProfit.toFixed(2)}`}
+                icon={TrendingUp}
+                loading={loading}
+                trend="up"
+                change={0}
+            />
+            <StatCard
+                title="Itens Vendidos"
+                value={itemsSold}
+                icon={ShoppingBag}
+                loading={loading}
+            />
+            <StatCard
+                title="Transações"
+                value={transactionCount}
+                icon={Activity}
+                loading={loading}
+            />
+        </div>
+    );
+};
+
 const StockAlertItem = ({ name, stock, min }: any) => {
     const navigate = useNavigate();
     return (
@@ -129,7 +144,7 @@ const Dashboard = () => {
     const { role } = useAuth();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [stats, setStats] = useState<DashboardStats>({
+    const [stats, setStats] = useState<DashboardStatsData>({
         todaySales: 0,
         todayProfit: 0,
         itemsSold: 0,
@@ -139,7 +154,7 @@ const Dashboard = () => {
     const [chartData, setChartData] = useState<any[]>([]);
 
     useEffect(() => {
-        let mounted = true; // A variável nasce dentro do useEffect
+        let mounted = true;
 
         const fetchDashboardData = async () => {
             if (!mounted) return;
@@ -152,13 +167,8 @@ const Dashboard = () => {
                 startOfDay.setHours(0, 0, 0, 0);
                 const isoToday = startOfDay.toISOString();
 
-                // For a more robust "today" including timezone shifts in DB, 
-                // sometimes using just the date string is better for 'date' columns,
-                // but for 'timestamptz' we use ISO.
                 console.log('🔍 [Dashboard] Filtering from:', isoToday);
 
-                // Busca Vendas, Itens e Produtos em paralelo
-                // Simplificando busca de itens: buscamos todos os itens de transações do tipo 'sale' de hoje
                 const [txRes, prodRes] = await Promise.all([
                     supabase.from('transactions').select('*').gte('created_at', isoToday).eq('type', 'sale'),
                     supabase.from('products').select('*').order('stock_quantity', { ascending: true })
@@ -170,7 +180,6 @@ const Dashboard = () => {
                 const transactions = txRes.data || [];
                 const allProducts = prodRes.data || [];
 
-                // Agora buscamos os itens especificamente para as transações encontradas
                 let txItems: any[] = [];
                 if (transactions.length > 0) {
                     const txIds = transactions.map(t => t.id);
@@ -184,7 +193,6 @@ const Dashboard = () => {
                     }
                 }
 
-                // Cálculos de Stats
                 const todaySales = transactions.reduce((acc, t) => acc + (t.total_amount || 0), 0);
                 const itemsSold = txItems.reduce((acc, i) => acc + (i.quantity || 0), 0);
                 const todayProfit = txItems.reduce((acc, i) => acc + (((i.unit_price || 0) - (i.unit_cost || 0)) * (i.quantity || 0)), 0);
@@ -198,7 +206,6 @@ const Dashboard = () => {
                     });
                     setStockAlerts(allProducts.filter(p => p.stock_quantity <= p.min_stock_alert).slice(0, 5));
 
-                    // Processamento de dados para o gráfico (Últimas 8h ou Horas do Dia)
                     const hourlyData: { [key: string]: number } = {};
                     transactions.forEach((t) => {
                         const hour = new Date(t.created_at).getHours();
@@ -225,7 +232,6 @@ const Dashboard = () => {
 
         fetchDashboardData();
 
-        // Realtime: Recarrega dados ao detectar mudanças nas tabelas
         const channel = supabase
             .channel('dashboard-realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
@@ -237,7 +243,7 @@ const Dashboard = () => {
             .subscribe();
 
         return () => {
-            mounted = false; // A variável morre aqui (Cleanup)
+            mounted = false;
             supabase.removeChannel(channel);
         };
     }, []);
@@ -297,7 +303,6 @@ const Dashboard = () => {
                 </div>
             </header>
 
-            {/* KPI Stats */}
             <DashboardStats
                 todaySales={stats.todaySales}
                 todayProfit={stats.todayProfit}
@@ -307,7 +312,6 @@ const Dashboard = () => {
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Sales Chart */}
                 <div className="lg:col-span-2 glass-card p-6">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-bold">Fluxo de Vendas (Hoje)</h3>
@@ -350,7 +354,6 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Stock Alerts */}
                 <div className="glass-card p-6">
                     <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                         <AlertCircle className="text-yellow-500 w-5 h-5" />

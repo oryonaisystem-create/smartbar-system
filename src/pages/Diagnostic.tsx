@@ -203,7 +203,7 @@ const TelemetryHistory = () => {
                 <div key={ev.id} className="p-3 border-b border-white/5 last:border-0 hover:bg-white/5 text-xs font-mono">
                     <div className="flex justify-between mb-1">
                         <span className={`font-bold ${ev.severity === 'error' || ev.severity === 'critical' ? 'text-red-400' :
-                                ev.severity === 'warning' ? 'text-yellow-400' : 'text-blue-400'
+                            ev.severity === 'warning' ? 'text-yellow-400' : 'text-blue-400'
                             }`}>[{ev.severity.toUpperCase()}] {ev.event_type}</span>
                         <span className="text-muted">{new Date(ev.created_at).toLocaleTimeString()}</span>
                     </div>
@@ -215,3 +215,4 @@ const TelemetryHistory = () => {
     );
 };
 
+export default Diagnostic;
